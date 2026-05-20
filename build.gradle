@@ -18,7 +18,8 @@ buildscript {
     }
     dependencies {
         classpath 'javax.servlet:javax.servlet-api:3.1.0'
-//        classpath 'com.shipwell:build-plugin:current-SNAPSHOT'
+        classpath 'com.archipelago.gradle:build-plugin:current-SNAPSHOT'
+//        classpath project(':build-plugin')
 //        classpath "org.ajoberstar.grgit:grgit-core:5.3.3"
 //        classpath 'org.curioswitch.gradle-pulumi-plugin:org.curioswitch.gradle-pulumi-plugin.gradle.plugin:0.9.1'
     }

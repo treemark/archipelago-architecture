@@ -30,27 +30,31 @@ build-plugin/
 
 The build-plugin defines Gradle plugins for each module type:
 
-| Plugin | Applied To | Purpose |
-|--------|-----------|---------|
-| `archipelago.ui` | ui-container | Deployable React application |
-| `archipelago.ui-library` | ui-library | Shared UI components |
-| `archipelago.service` | service-container | Deployable Spring service |
-| `archipelago.service-library` | service-library | Shared service logic |
-| `archipelago.infrastructure` | infrastructure-container | Deployable Pulumi IaC |
-| `archipelago.infrastructure-library` | infrastructure-library | Shared IaC patterns |
+| Plugin | Purpose |
+|--------|---------|
+| `archipelago.island` | Island aggregator (contains tier submodules) |
+| `archipelago.ui-lib` | Shared UI components |
+| `archipelago.service-lib` | Shared service logic |
+| `archipelago.infrastructure` | Shared Pulumi patterns, VPC, messaging |
 
 ### What These Plugins Standardize
 
-- **Naming**: `island-tier-library` / `island-tier-container` conventions
+- **Naming**: `island-tier-lib` conventions
 - **Build**: Dependency configuration, artifact types
 - **Structure**: Source directory layouts
-- **Deployment**: Container vs library publication behavior
+- **Publication**: Maven publication configuration
 
 ## Using Module Plugins
 
 ```groovy
+// For islands (aggregates tier submodules)
 plugins {
-    id 'archipelago.service-library' version '1.0.0'
+    id 'archipelago.island'
+}
+
+// For tier libraries
+plugins {
+    id 'archipelago.service-lib'
 }
 ```
 
@@ -69,3 +73,21 @@ plugins {
 ./gradlew :build-plugin:jar
 ./gradlew :build-plugin:publish
 ```
+
+## Developing Plugin Changes
+
+When making changes to plugins in the build-plugin module, those changes must be compiled and published locally before they can be used by other modules in the project. This is because the core modules depend on the build-plugin via a `classpath` in the root `build.gradle`.
+
+**Important:** After modifying any plugin code, run:
+
+```bash
+./gradlew :build-plugin:publishToMavenLocal -PbuildPluginOnly=true
+```
+
+Then rebuild the dependent modules:
+
+```bash
+./gradlew assemble
+```
+
+This publishes the plugin artifacts to your local Maven repository (`~/.m2/repository`), making them available for the archipelago module plugins to use.

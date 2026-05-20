@@ -12,12 +12,9 @@ The core module is the **foundational island** providing shared libraries and in
 
 ```
 core/
-├── ui/
-│   └── ui-library/          # Shared React components, OpenAPI specs
-├── service/
-│   └── service-library/     # Shared Spring configurations, base versions
-└── infrastructure/
-    └── infrastructure-library/  # Shared VPC, messaging, Pulumi patterns
+├── ui-lib/                    # Shared React components, OpenAPI specs
+├── service-lib/               # Shared Spring configurations, base versions
+└── infrastructure/            # Shared VPC, messaging, Pulumi patterns
 ```
 
 Core island defines:

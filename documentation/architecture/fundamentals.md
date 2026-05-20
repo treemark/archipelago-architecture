@@ -17,21 +17,15 @@ Each island module contains three tier submodules:
 
 ```
 island/
-├── ui/                    # Frontend tier
-│   ├── ui-library/        # Shared UI components (declarative)
-│   └── ui-container/      # Deployable UI application
-├── service/               # Backend tier
-│   ├── service-library/   # Shared service logic (declarative)
-│   └── service-container/ # Deployable service application
-└── infrastructure/       # IaC tier
-    ├── infrastructure-library/  # Shared infra patterns
-    └── infrastructure-container/ # Deployable infrastructure
+├── ui-lib/                # Shared UI components (declarative)
+├── service-lib/           # Shared service logic (declarative)
+└── infrastructure/        # Shared Pulumi patterns, VPC, messaging (deploys containers)
 ```
 
 **Module types are defined by Gradle plugins** (defined in build-plugin):
-- `ui` / `ui-library`
-- `service` / `service-library`
-- `infrastructure` / `infrastructure-library`
+- `archipelago.ui-lib`
+- `archipelago.service-lib`
+- `archipelago.infrastructure`
 
 These plugins standardize naming, build, structure, and deployment conventions.
 

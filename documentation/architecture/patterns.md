@@ -52,12 +52,31 @@ The project uses Gradle multi-module structure:
 ```
 Root Project
 ├── settings.gradle        # Module definitions
-├── build.gradle           # Root build config
-├── core/                  # Core application module
-│   └── build.gradle
-└── build-plugin/          # Plugin module
-    └── build.gradle
+├── build.gradle         # Root build config
+├── core/              # Core island
+│   ├── service-lib/   # Service tier lib
+│   ├── ui-lib/      # UI tier lib
+│   └── infrastructure/  # Infrastructure tier
+└── build-plugin/    # Build plugins
 ```
+
+### Naming Convention
+
+Names are derived from the Gradle project hierarchy:
+
+| Module | Artifact Name |
+|--------|--------------|
+| `core/service-lib` | `archipelago-architecture-core-service-lib` |
+| `core/ui-lib` | `archipelago-architecture-core-ui-lib` |
+| `core/infrastructure` | `archipelago-architecture-core-infrastructure` |
+
+PublishUtils provides utilities:
+- `determineArtifactName()` - Full hierarchy name
+- `getModuleName()` - Short name
+- `getIslandName()` - Island name
+- `getTierType()` - service/ui/infrastructure
+- `determineDockerImageName()` - Container names
+- `determineVersion()` - Version with branch/qualifier
 
 ### Module Dependencies
 

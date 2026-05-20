@@ -1,37 +1,9 @@
 plugins {
-    id("org.springframework.boot") version "3.4.5"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.kotlin.plugin.spring") version "2.1.0"
-    id("java")
+    id 'archipelago.island'
 }
 
-group = "com.archipelago"
-version = "0.0.1-SNAPSHOT"
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-}
+// Group and version come from gradle.properties
 
 repositories {
     mavenCentral()
-}
-
-dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-}
-
-kotlin {
-    compilerOptions {
-        freeCompilerArgs.add("-Xjsr305=strict")
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-    }
-}
-
-tasks.withType(Test) {
-    useJUnitPlatform()
 }

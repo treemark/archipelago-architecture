@@ -1,0 +1,7 @@
+plugins {
+    id 'archipelago.infrastructure'
+}
+
+dependencies {
+    // Infrastructure dependencies (Pulumi SDK, etc.)
+}

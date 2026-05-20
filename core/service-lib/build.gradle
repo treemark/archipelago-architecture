@@ -1,0 +1,7 @@
+plugins {
+    id 'archipelago.service-lib'
+}
+
+dependencies {
+    // Shared service logic dependencies
+}

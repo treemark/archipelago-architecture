@@ -4,8 +4,6 @@ plugins {
     id("java-gradle-plugin")
 }
 
-group = "com.archipelago.plugins"
-version = "0.0.1-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -57,6 +55,26 @@ gradlePlugin {
         samplePlugin {
             id = "com.archipelago.sample"
             implementationClass = "com.archipelago.plugins.SamplePlugin"
+        }
+        uiLibPlugin {
+            id = "archipelago.ui-lib"
+            implementationClass = "com.archipelago.plugins.UiLibPlugin"
+        }
+        uiContainerPlugin {
+            id = "archipelago.ui-container"
+            implementationClass = "com.archipelago.plugins.UiContainerPlugin"
+        }
+        serviceLibPlugin {
+            id = "archipelago.service-lib"
+            implementationClass = "com.archipelago.plugins.ServiceLibPlugin"
+        }
+        infrastructurePlugin {
+            id = "archipelago.infrastructure"
+            implementationClass = "com.archipelago.plugins.InfrastructurePlugin"
+        }
+        islandPlugin {
+            id = "archipelago.island"
+            implementationClass = "com.archipelago.plugins.IslandPlugin"
         }
     }
 }
