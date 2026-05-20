@@ -65,9 +65,9 @@ publishing {
     publications {
         maven(MavenPublication) {
             from(components["java"])
-            groupId = "com.archipelago.plugins"
-            artifactId = "archipelago-sample-plugin"
-            version = version.toString()
+            groupId = "com.archipelago.gradle"
+            artifactId = "build-plugin"
+            version 'current-SNAPSHOT'
             
             pom {
                 name.set("Archipelago Sample Plugin")
@@ -84,8 +84,13 @@ publishing {
     
     repositories {
         maven {
-            name = "local"
-            url = uri("${System.getProperty("user.home")}/.m2/repository")
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/treemark/archipelago-architecture")
+
+            credentials {
+                username = "token"
+                password = project.hasProperty('github_token') ? project.getProperty('github_token') : System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }
