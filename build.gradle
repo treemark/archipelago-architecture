@@ -1,5 +1,30 @@
 // Top-level build file for archipelago-architecture multi-module project
 
+buildscript {
+    repositories {
+        mavenLocal()
+        maven {
+            url = uri("https://maven.pkg.github.com/treemark/archipelago-architecture")
+            credentials {
+                username = "token"
+                password = project.hasProperty('github_token') ? project.getProperty('github_token') : System.getenv("GITHUB_TOKEN")
+            }
+        }
+        maven {
+            url = uri("https://mvnrepository.com/artifact/org.ajoberstar.grgit/grgit-core")
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'javax.servlet:javax.servlet-api:3.1.0'
+//        classpath 'com.shipwell:build-plugin:current-SNAPSHOT'
+//        classpath "org.ajoberstar.grgit:grgit-core:5.3.3"
+//        classpath 'org.curioswitch.gradle-pulumi-plugin:org.curioswitch.gradle-pulumi-plugin.gradle.plugin:0.9.1'
+    }
+}
+
+
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0" apply false
 }

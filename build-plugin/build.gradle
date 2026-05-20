@@ -18,11 +18,38 @@ tasks.withType(ProcessResources) {
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
+
+def lombokVersion = project.findProperty("lombok.version")
 
 dependencies {
     implementation(platform("org.apache.groovy:groovy-bom:4.0.23"))
     implementation("org.apache.groovy:groovy")
+    //    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+//    testAnnotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testImplementation "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+
+    api 'com.pulumi:pulumi:1.17.0'
+//    api project(":infrastructure:infrastructure-lib")
+
+    implementation localGroovy()
+    implementation gradleApi()
+    api 'org.apache.commons:commons-lang3:3.12.0'
+//    api 'com.github.node-gradle:gradle-node-plugin:7.1.0'
+    // https://mvnrepository.com/artifact/com.github.node-gradle/gradle-node-plugin
+    api group: 'com.github.node-gradle', name: 'gradle-node-plugin', version: '3.5.1'
+    api 'org.apache.velocity:velocity-engine-core:2.3'
+    api 'org.yaml:snakeyaml:1.33'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.11.1'
+    api 'com.symplegit:symplegit:1.0'
+//    api ("com.amazonaws:aws-java-sdk:1.12.792")
+    api("software.amazon.awssdk:aws-sdk-java:2.36.1")
 }
 
 gradlePlugin {
