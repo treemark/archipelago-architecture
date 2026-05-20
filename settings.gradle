@@ -1,0 +1,4 @@
+rootProject.name = "archipelago-architecture"
+
+include("core")
+include("build-plugin")

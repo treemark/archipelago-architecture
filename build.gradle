@@ -1,0 +1,14 @@
+// Top-level build file for archipelago-architecture multi-module project
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0" apply false
+}
+
+def springBootVersion = project.findProperty("spring-boot.version")
+def kotlinVersion = project.findProperty("kotlin.version")
+
+subprojects {
+    repositories {
+        mavenCentral()
+    }
+}
