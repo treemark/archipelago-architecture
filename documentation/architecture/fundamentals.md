@@ -6,26 +6,76 @@ The architecture takes its name from the **archipelago pattern** - a collection 
 
 ## Module Types
 
-| Type | Description |
-|------|-------------|
-| **Islands** | Full-stack deployable containers containing UI, service tier, and backend components (databases, caches) |
-| **Libraries** | Shared code that runs inside islands, providing common business logic |
+| Type | Description                                                                                                                                    |
+|------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Islands** | A collection of deployable containers containing UI, service tier, and backend components (databases, caches, etc)                             |
+| **Libraries** | Shared code that runs inside islands, providing business logic that needs to be shared between islands. These can be frontend, backend or IaC. |
+| **Containers** | Deployable Docker containers - can be frontend (UI) or backend (service) applications.                                                         |
+| **Infrastructure as Code** | Pulumi IaC code that defines cloud infrastructure (VPC, clusters, services) for other containers.                                              |
+
+Each module type has a corresponding **Gradle plugin** (defined in build-plugin) that handles:
+- **Build**: Compilation, testing, packaging conventions
+- **CI/CD**: Release workflows, version management, Docker image publishing
+- **Deployment**: Infrastructure provisioning, container deployment, health checks
+
+### Container Structure
+
+Each container is a deployable Docker image. The architecture supports two types of containers:
+
+- **UI Container**: Frontend application (React) - built with the `archipelago.ui-container` plugin
+- **Service Container**: Backend application (Spring/Java) - built with a corresponding service container plugin
+
+**Gradle plugins for containers** (defined in build-plugin):
+- `archipelago.ui-container` - Builds and packages React applications for Docker deployment
+- Service container plugins follow the same pattern
+
+These plugins handle Node/npm builds, Docker image naming, and packaging for deployment.
+
+### Library Structure
+
+Libraries contain shared code that runs inside containers. They can be:
+- **UI Libraries**: Shared React components and hooks
+- **Service Libraries**: Shared Java business logic
+- **IaC Libraries**: Shared Pulumi patterns
+
+**Gradle plugins for libraries** (defined in build-plugin):
+- `archipelago.ui-lib` - Standardizes UI library structure and publication
+- `archipelago.service-lib` - Standardizes service library structure and publication
+- `archipelago.infrastructure` - Used for IaC library patterns
+
+These plugins handle versioning, publication, and consumption conventions.
+
+### Infrastructure as Code Structure
+
+Infrastructure as Code (IaC) modules contain Pulumi code that defines cloud infrastructure for other containers. This includes:
+
+- **VPC and networking**: Virtual networks, subnets, security groups
+- **Container orchestration**: ECS/Fargate clusters, Kubernetes clusters
+- **Managed services**: Databases (RDS, DynamoDB), caches (ElastiCache), queues (SQS)
+- **Public endpoints**: ALB, API Gateway, CloudFront distributions
+
+**Gradle plugin for IaC** (defined in build-plugin):
+- `archipelago.infrastructure` - Handles Pulumi stack management, deployments, and infrastructure definitions
+
+This plugin enables each island to define its own infrastructure alongside its containers, providing self-contained deployment.
 
 ### Island Structure
 
-Each island module contains three tier submodules:
+Each island module contains one or more submodules.
 
 ```
 island/
 ├── ui-lib/                # Shared UI components (declarative)
+├── ui-container/          # Shared UI components (declarative)
 ├── service-lib/           # Shared service logic (declarative)
+├── service-container/     # Backend Service Container
 └── infrastructure/        # Shared Pulumi patterns, VPC, messaging (deploys containers)
 ```
 
-**Module types are defined by Gradle plugins** (defined in build-plugin):
-- `archipelago.ui-lib`
-- `archipelago.service-lib`
-- `archipelago.infrastructure`
+**Gradle plugins for Islands** (defined in build-plugin):
+- `archipelago.island` - Organizes island structure with all component types, coordinates builds across all submodules
+
+This plugin orchestrates builds across all submodule types (ui-lib, service-lib, ui-container, service-container, infrastructure) to create a complete island package.
 
 These plugins standardize naming, build, structure, and deployment conventions.
 
@@ -43,7 +93,47 @@ Avoids the "distributed monolith" anti-pattern by:
 ### Shared Logic = Libraries
 When business logic must be shared across islands, it lives in **libraries** that are bundled into the island containers - not as shared services.
 
+### Backend for Frontend (BFF) / Interface Segregation
+The architecture embraces the **Backend for Frontend** pattern ([also known as interface segregation](https://en.wikipedia.org/wiki/Interface_segregation_principle)), which states that it is better to have many consumer-specific APIs than one general-purpose API. Each island exposes its own curated API surface tailored to its specific consumers rather than aggregating everything into monolithic backends.
+
+This pattern is facilitated in Archipelago through:
+- **[OpenAPI Specifications](https://learn.microsoft.com/en-us/azure/architecture/patterns/backends-for-frontends)**: Each service container generates and publishes its OpenAPI spec, documenting the exact API contract
+- **Client-side RPC Stubs**: UI containers consume these OpenAPI specs to generate type-safe RPC-style stubs, enabling seamless communication without manual API integration
+
+By treating each island as its own BFF, the architecture prevents:
+- Bloated APIs with endpoints that don't belong to any consumer
+- Coordination overhead between teams owning different UI experiences
+- Tight coupling through shared general-purpose endpoints
+
+See also:
+- [Backends for Frontends Pattern - Azure Architecture Center](https://learn.microsoft.com/en-us/azure/architecture/patterns/backends-for-frontends)
+- [Backend for Frontend in Monorepos: Best Practices](https://www.paulserban.eu/blog/post/backend-for-frontend-in-monorepos-best-practices-and-strategies/)
+- [Interface Segregation for Microservices APIs](https://www.nilus.be/blog/interface_segregation_for_microservices_apis/)
+
+### Functional Organization: Type at High Levels, Feature at Low Levels
+Code should be organized by **type** at high levels (to provide orientation and context) but by **feature/function** at deeper levels (to keep related code together).[^1]
+
+This hybrid approach combines the best of both worlds:
+- **High-level structure by type**: At the top level, directories like `ui-lib/`, `service-lib/`, `infrastructure/` quickly convey what categories of components exist
+- **Deep-level structure by feature**: Within each library or container, code groups by feature (e.g., `auth/`, `billing/`, `users/`) rather than technical layer
+
+Research supports this pattern — feature-based organization "scales better in larger codebases" and "tells a story" about the application.[^1] [^2]
+
+**Implementation in Archipelago**:
+- Each island contains multiple submodule types (`ui-lib`, `service-lib`, `infrastructure`, etc.) — the type-based high level
+- Within each submodule, code is organized by feature/domain (e.g., `service-lib/src/main/java/com/archipelago/service/billing/`, `service-lib/src/main/java/com/archipelago/service/auth/`)
+- This keeps all code for a feature — models, services, validators — bundled together, while still providing type-based conventions at the appropriate level
+
+The alternative (organizing exclusively by type like `controllers/`, `models/`, `validators/`) scatters feature-related code across many directories, making navigation harder as the codebase grows.[^1] [^3]
+
+See also:
+- [Structure by Type vs Feature](https://dev.to/jesterxl/code-organization-in-functional-programming-vs-object-oriented-programming-79i)
+- [The Life-changing Magic of Feature-Focused Code Organization](https://dev.to/jamesmh/the-life-changing-and-time-saving-magic-of-feature-focused-code-organization-1708)
+- [Package-by-Feature, Not Layer](http://www.javapractices.com/topic/TopicAction.do?Id=205)
+- [A Front-End Application Folder Structure that Makes Sense](https://fadamakis.com/a-front-end-application-folder-structure-that-makes-sense-ecc0b690968b)
+
 ### Core as the Foundational Island
+
 The `core` project is the **foundational island** establishing shared infrastructure:
 - Messaging services (Kafka, etc.)
 - VPC/network definitions
@@ -54,14 +144,14 @@ Other islands extend and consume shared infrastructure from core.
 
 ## Why This Architecture?
 
-| Problem | Solution |
-|---------|----------|
-| Distributed monolith | Islands with async boundaries |
-| Tight coupling via REST | CDC + async messaging |
-| Shared services become bottlenecks | Libraries embedded in containers |
-| Deployment dependencies | Independent island deployment |
-| Manual infrastructure | Pulumi IaC in each island |
-| Version drift across teams | Core island defines base versions |
+| Problem | Solution                                                          |
+|---------|-------------------------------------------------------------------|
+| Distributed monolith | Operationally independent islands of related functions            |
+| Tight coupling via REST | Change data capture, async messaging and locally replicated data. |
+| Shared services become bottlenecks | Libraries embedded in containers                                  |
+| Deployment dependencies | Independent island deployment                                     |
+| Manual infrastructure | Pulumi IaC in each island                                         |
+| Version drift across teams | Core island defines base versions                                 |
 
 ## Key Technologies
 

@@ -88,8 +88,8 @@ publishing {
             version 'current-SNAPSHOT'
             
             pom {
-                name.set("Archipelago Sample Plugin")
-                description.set("A sample Gradle plugin for archipelago-architecture")
+                name.set("Archipelago Build Plugins")
+                description.set("A gradle plugins for archipelago-architecture")
                 licenses {
                     license {
                         name.set("MIT")
