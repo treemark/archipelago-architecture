@@ -1,0 +1,7 @@
+plugins {
+    id 'archipelago.react-lib'
+}
+
+dependencies {
+    // Shared React components dependencies
+}

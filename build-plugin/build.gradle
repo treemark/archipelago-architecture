@@ -56,25 +56,25 @@ gradlePlugin {
             id = "com.archipelago.sample"
             implementationClass = "com.archipelago.plugins.SamplePlugin"
         }
-        uiLibPlugin {
-            id = "archipelago.ui-lib"
-            implementationClass = "com.archipelago.plugins.UiLibPlugin"
+        reactLibPlugin {
+            id = "archipelago.react-lib"
+            implementationClass = "com.archipelago.plugins.react.ReactLibPlugin"
         }
-        uiContainerPlugin {
-            id = "archipelago.ui-container"
-            implementationClass = "com.archipelago.plugins.UiContainerPlugin"
+        reactContainerPlugin {
+            id = "archipelago.react-container"
+            implementationClass = "com.archipelago.plugins.react.ReactContainerPlugin"
         }
-        serviceLibPlugin {
-            id = "archipelago.service-lib"
-            implementationClass = "com.archipelago.plugins.ServiceLibPlugin"
+        springLibPlugin {
+            id = "archipelago.spring-lib"
+            implementationClass = "com.archipelago.plugins.spring.SpringLibPlugin"
         }
-        infrastructurePlugin {
-            id = "archipelago.infrastructure"
-            implementationClass = "com.archipelago.plugins.InfrastructurePlugin"
+        pulumiPlugin {
+            id = "archipelago.pulumi"
+            implementationClass = "com.archipelago.plugins.pulumi.PulumiPlugin"
         }
         islandPlugin {
             id = "archipelago.island"
-            implementationClass = "com.archipelago.plugins.IslandPlugin"
+            implementationClass = "com.archipelago.plugins.island.IslandPlugin"
         }
     }
 }

@@ -8,9 +8,9 @@ The architecture takes its name from the **archipelago pattern** - a collection 
 
 | Type | Description                                                                                                                                    |
 |------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Islands** | A collection of deployable containers containing UI, service tier, and backend components (databases, caches, etc)                             |
-| **Libraries** | Shared code that runs inside islands, providing business logic that needs to be shared between islands. These can be frontend, backend or IaC. |
-| **Containers** | Deployable Docker containers - can be frontend (UI) or backend (service) applications.                                                         |
+| **Islands** | A collection of deployable containers containing React frontend, Spring backend, and infrastructure components (databases, caches, etc)            |
+| **Libraries** | Shared code that runs inside islands, providing business logic that needs to be shared between islands. These can be React, Spring or Pulumi IaC. |
+| **Containers** | Deployable Docker containers - can be frontend (React) or backend (Spring) applications.                                                        |
 | **Infrastructure as Code** | Pulumi IaC code that defines cloud infrastructure (VPC, clusters, services) for other containers.                                              |
 
 Each module type has a corresponding **Gradle plugin** (defined in build-plugin) that handles:
@@ -22,26 +22,26 @@ Each module type has a corresponding **Gradle plugin** (defined in build-plugin)
 
 Each container is a deployable Docker image. The architecture supports two types of containers:
 
-- **UI Container**: Frontend application (React) - built with the `archipelago.ui-container` plugin
-- **Service Container**: Backend application (Spring/Java) - built with a corresponding service container plugin
+- **React Container**: Frontend application (React) - built with the `archipelago.react-container` plugin
+- **Spring Container**: Backend application (Spring/Java) - built with a corresponding Spring container plugin
 
 **Gradle plugins for containers** (defined in build-plugin):
-- `archipelago.ui-container` - Builds and packages React applications for Docker deployment
-- Service container plugins follow the same pattern
+- `archipelago.react-container` - Builds and packages React applications for Docker deployment
+- Spring container plugins follow the same pattern
 
 These plugins handle Node/npm builds, Docker image naming, and packaging for deployment.
 
 ### Library Structure
 
 Libraries contain shared code that runs inside containers. They can be:
-- **UI Libraries**: Shared React components and hooks
-- **Service Libraries**: Shared Java business logic
-- **IaC Libraries**: Shared Pulumi patterns
+- **React Libraries**: Shared React components and hooks
+- **Spring Libraries**: Shared Java business logic
+- **Pulumi Libraries**: Shared Pulumi patterns
 
 **Gradle plugins for libraries** (defined in build-plugin):
-- `archipelago.ui-lib` - Standardizes UI library structure and publication
-- `archipelago.service-lib` - Standardizes service library structure and publication
-- `archipelago.infrastructure` - Used for IaC library patterns
+- `archipelago.react-lib` - Standardizes React library structure and publication
+- `archipelago.spring-lib` - Standardizes Spring library structure and publication
+- `archipelago.pulumi` - Used for Pulumi library patterns
 
 These plugins handle versioning, publication, and consumption conventions.
 
@@ -55,7 +55,7 @@ Infrastructure as Code (IaC) modules contain Pulumi code that defines cloud infr
 - **Public endpoints**: ALB, API Gateway, CloudFront distributions
 
 **Gradle plugin for IaC** (defined in build-plugin):
-- `archipelago.infrastructure` - Handles Pulumi stack management, deployments, and infrastructure definitions
+- `archipelago.pulumi` - Handles Pulumi stack management, deployments, and infrastructure definitions
 
 This plugin enables each island to define its own infrastructure alongside its containers, providing self-contained deployment.
 
@@ -65,17 +65,17 @@ Each island module contains one or more submodules.
 
 ```
 island/
-├── ui-lib/                # Shared UI components (declarative)
-├── ui-container/          # Shared UI components (declarative)
-├── service-lib/           # Shared service logic (declarative)
-├── service-container/     # Backend Service Container
-└── infrastructure/        # Shared Pulumi patterns, VPC, messaging (deploys containers)
+├── react-lib/            # Shared React components
+├── react-container/      # React Container
+├── spring-lib/           # Shared Spring logic
+├── spring-container/      # Spring Container
+└── pulumi/              # Shared Pulumi patterns, VPC, messaging (deploys containers)
 ```
 
 **Gradle plugins for Islands** (defined in build-plugin):
 - `archipelago.island` - Organizes island structure with all component types, coordinates builds across all submodules
 
-This plugin orchestrates builds across all submodule types (ui-lib, service-lib, ui-container, service-container, infrastructure) to create a complete island package.
+This plugin orchestrates builds across all submodule types (react-lib, spring-lib, react-container, spring-container, pulumi) to create a complete island package.
 
 These plugins standardize naming, build, structure, and deployment conventions.
 
@@ -114,14 +114,14 @@ See also:
 Code should be organized by **type** at high levels (to provide orientation and context) but by **feature/function** at deeper levels (to keep related code together).[^1]
 
 This hybrid approach combines the best of both worlds:
-- **High-level structure by type**: At the top level, directories like `ui-lib/`, `service-lib/`, `infrastructure/` quickly convey what categories of components exist
+- **High-level structure by type**: At the top level, directories like `react-lib/`, `spring-lib/`, `pulumi/` quickly convey what categories of components exist
 - **Deep-level structure by feature**: Within each library or container, code groups by feature (e.g., `auth/`, `billing/`, `users/`) rather than technical layer
 
 Research supports this pattern — feature-based organization "scales better in larger codebases" and "tells a story" about the application.[^1] [^2]
 
 **Implementation in Archipelago**:
-- Each island contains multiple submodule types (`ui-lib`, `service-lib`, `infrastructure`, etc.) — the type-based high level
-- Within each submodule, code is organized by feature/domain (e.g., `service-lib/src/main/java/com/archipelago/service/billing/`, `service-lib/src/main/java/com/archipelago/service/auth/`)
+- Each island contains multiple submodule types (`react-lib`, `spring-lib`, `pulumi`, etc.) — the type-based high level
+- Within each submodule, code is organized by feature/domain (e.g., `spring-lib/src/main/java/com/archipelago/spring/billing/`, `spring-lib/src/main/java/com/archipelago/spring/auth/`)
 - This keeps all code for a feature — models, services, validators — bundled together, while still providing type-based conventions at the appropriate level
 
 The alternative (organizing exclusively by type like `controllers/`, `models/`, `validators/`) scatters feature-related code across many directories, making navigation harder as the codebase grows.[^1] [^3]

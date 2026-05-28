@@ -28,9 +28,9 @@ Each island module follows a consistent tier-based structure:
 
 ```
 island/
-├── ui-lib/                # Shared UI components
-├── service-lib/           # Shared service logic
-└── infrastructure/       # Shared Pulumi patterns, VPC, messaging
+├── react-lib/           # Shared React components
+├── spring-lib/          # Shared Spring logic
+└── pulumi/              # Shared Pulumi patterns, VPC, messaging
 ```
 
 ## Module Type Plugins
@@ -39,9 +39,9 @@ Module types are defined by Gradle plugins in `build-plugin`:
 
 | Plugin | Purpose |
 |--------|---------|
-| `archipelago.ui-lib` | Shared UI components |
-| `archipelago.service-lib` | Shared service logic |
-| `archipelago.infrastructure` | Shared Pulumi patterns, VPC, messaging |
+| `archipelago.react-lib` | Shared React components |
+| `archipelago.spring-lib` | Shared Spring logic |
+| `archipelago.pulumi` | Shared Pulumi patterns, VPC, messaging |
 
 These plugins standardize:
 - Naming conventions

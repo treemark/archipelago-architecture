@@ -1,0 +1,7 @@
+plugins {
+    id 'archipelago.pulumi'
+}
+
+dependencies {
+    // Pulumi dependencies (Pulumi SDK, etc.)
+}

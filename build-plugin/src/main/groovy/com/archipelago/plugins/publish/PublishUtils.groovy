@@ -9,14 +9,14 @@ import org.gradle.api.Project
  * 
  * Naming Convention: The module's location in the Gradle project hierarchy defines its name.
  *  - Island: {root}-{islandName}
- *  - Service: {root}-{islandName}-service-lib or {root}-{islandName}-service
- *  - UI: {root}-{islandName}-ui-lib or {root}-{islandName}-ui
- *  - Infrastructure: {root}-{islandName}-infrastructure
+ *  - Spring: {root}-{islandName}-spring-lib or {root}-{islandName}-spring
+ *  - React: {root}-{islandName}-react-lib or {root}-{islandName}-react
+ *  - Pulumi: {root}-{islandName}-pulumi
  *
  * Examples:
- *  - core-service-lib: archipelago-architecture/core-service-lib
- *  - core-ui-lib: archipelago-architecture/core-ui-lib
- *  - myisland-service: archipelago-architecture/myisland-service
+ *  - core-spring-lib: archipelago-architecture/core-spring-lib
+ *  - core-react-lib: archipelago-architecture/core-react-lib
+ *  - myisland-spring: archipelago-architecture/myisland-spring
  */
 class PublishUtils {
     
@@ -51,18 +51,18 @@ class PublishUtils {
     }
     
     /**
-     * Determine the tier type: service-lib, ui-lib, infrastructure
+     * Determine the tier type: spring-lib, react-lib, pulumi
      */
     static String getTierType(Project p) {
         def name = p.name
-        if (name.endsWith('-service-lib') || name.endsWith('-service')) {
-            return 'service'
+        if (name.endsWith('-spring-lib') || name.endsWith('-spring')) {
+            return 'spring'
         }
-        if (name.endsWith('-ui-lib') || name.endsWith('-ui')) {
-            return 'ui'
+        if (name.endsWith('-react-lib') || name.endsWith('-react')) {
+            return 'react'
         }
-        if (name.endsWith('-infrastructure')) {
-            return 'infrastructure'
+        if (name.endsWith('-pulumi')) {
+            return 'pulumi'
         }
         return 'unknown'
     }

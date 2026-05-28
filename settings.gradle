@@ -1,8 +1,8 @@
 rootProject.name = "archipelago-architecture"
 if (!settings.hasProperty('buildPluginOnly') || settings.getProperty('buildPluginOnly') != 'true') {
     include("core")
-    include("core:service-lib")
-    include("core:ui-lib")
-    include("core:infrastructure")
+    include("core:spring-lib")
+    include("core:react-lib")
+    include("core:pulumi")
 }
 include("build-plugin")

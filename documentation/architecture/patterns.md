@@ -19,23 +19,6 @@ The project implements a plugin-based architecture that allows for dynamic exten
 2. **Extension Plugins** - Optional modules that extend capabilities
 3. **Integration Plugins** - Connect to external systems (Git, Shell, etc.)
 
-### Plugin Interface Pattern
-
-```groovy
-// Example plugin structure
-class PluginName {
-    String name
-    String version
-    
-    void initialize() { }
-    void execute(context) { }
-    void cleanup() { }
-}
-```
-
-## Controller-Service Pattern
-
-The Java controller layer follows the standard MVC pattern with Spring Boot.
 
 ### Layer Responsibilities
 
@@ -54,10 +37,10 @@ Root Project
 ├── settings.gradle        # Module definitions
 ├── build.gradle         # Root build config
 ├── core/              # Core island
-│   ├── service-lib/   # Service tier lib
-│   ├── ui-lib/      # UI tier lib
-│   └── infrastructure/  # Infrastructure tier
-└── build-plugin/    # Build plugins
+│   ├── spring-lib/    # Spring libraries
+│   ├── react-lib/     # React tier lib
+│   └── pulumi/        # Pulumi tier
+└── build-plugin/      # Build plugins
 ```
 
 ### Naming Convention
@@ -66,15 +49,15 @@ Names are derived from the Gradle project hierarchy:
 
 | Module | Artifact Name |
 |--------|--------------|
-| `core/service-lib` | `archipelago-architecture-core-service-lib` |
-| `core/ui-lib` | `archipelago-architecture-core-ui-lib` |
-| `core/infrastructure` | `archipelago-architecture-core-infrastructure` |
+| `core/spring-lib` | `archipelago-architecture-core-spring-lib` |
+| `core/react-lib` | `archipelago-architecture-core-react-lib` |
+| `core/pulumi` | `archipelago-architecture-core-pulumi` |
 
 PublishUtils provides utilities:
 - `determineArtifactName()` - Full hierarchy name
 - `getModuleName()` - Short name
 - `getIslandName()` - Island name
-- `getTierType()` - service/ui/infrastructure
+- `getTierType()` - spring/react/pulumi
 - `determineDockerImageName()` - Container names
 - `determineVersion()` - Version with branch/qualifier
 

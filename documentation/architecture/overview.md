@@ -23,17 +23,13 @@ The Archipelago Architecture project is designed as a modular, extensible system
 
 ### Core Module (`core/`)
 
-The core module contains the main application logic.
+The core module contains fundamental libraries and infrastructure needed by other islands.
 
-**Key Components:**
-- `ArchipelagoCoreApplication.kt` - Main Spring Boot application entry point
-- `ArchipelagoJavaController.java` - REST API controller for core operations
-- `application.yml` - Application configuration
+
 
 **Technology Stack:**
 - Spring Framework
 - Java as primary language
-- Kotlin available as alternative language
 - React for UI
 - Pulumi (Java API) for IaC
 - JUnit for testing
