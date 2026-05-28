@@ -194,6 +194,106 @@ Islands must not share a Redux store, Zustand store, or React context across the
 
 ---
 
+## Gradle Build Integration
+
+The frontend build is orchestrated by Gradle using the **`com.github.node-gradle.node`** plugin (v7.1.0+). This allows Gradle to manage the full dependency chain between backend outputs (e.g., generated OpenAPI specs from Spring/Springdoc) and frontend build steps, ensuring correct ordering without manual coordination.
+
+### Why `com.github.node-gradle.node`
+
+- Provides a first-class `PnpmTask` type alongside `NpmTask` and `YarnTask`, making pnpm a direct citizen of the Gradle task graph.
+- Supports `download = true` to provision Node.js and pnpm automatically — no local install required on CI runners.
+- Allows `inputs`/`outputs` declarations on tasks, enabling Gradle's up-to-date checking so frontend builds are skipped when sources haven't changed.
+- Offers full task-graph flexibility needed for a multi-island monorepo where each island may have its own OpenAPI generation step before its pnpm build.
+
+### Archipelago Plugin Wrapper
+
+`com.github.node-gradle.node` is **not applied directly** in island or library `build.gradle` files. Instead, it is applied and configured exclusively inside Archipelago convention plugins located at:
+
+```
+build-plugin/src/main/groovy/com/archipelago/plugins/react/
+├── ReactContainerPlugin.groovy   # For deployable React apps (Module Federation remotes/shell)
+└── ReactLibPlugin.groovy         # For shared React libraries (ui-primitives, ui-tokens, etc.)
+```
+
+These convention plugins are the **single point of control** for the `com.github.node-gradle.node` dependency. Centralising the integration here provides three key benefits:
+
+- **Version control in one place** — the version of `com.github.node-gradle.node` is pinned in `build-plugin`'s own dependency block and nowhere else. Upgrading requires a single change, not a sweep across every island or library module.
+- **Enforced conventions** — Node version, pnpm version, standard task names, `inputs`/`outputs` patterns, and any other Archipelago-specific modifications to the plugin's behaviour are codified in the Groovy plugin class. No island can silently deviate.
+- **Extensibility** — any future need to wrap, augment, or constrain `com.github.node-gradle.node` behaviour (e.g., enforcing frozen lockfiles in CI, registering additional lifecycle hooks, or integrating with custom Archipelago build reporting) is implemented once in these plugin files and automatically inherited by all consumers.
+
+Island and library subprojects apply the Archipelago plugin instead of the upstream one directly:
+
+```groovy
+// island-name/build.gradle
+plugins {
+    id 'com.archipelago.react-container'   // applies & configures com.github.node-gradle.node internally
+}
+```
+
+```groovy
+// libs/ui-primitives/build.gradle
+plugins {
+    id 'com.archipelago.react-lib'         // applies & configures com.github.node-gradle.node internally
+}
+```
+
+Inside each plugin, `com.github.node-gradle.node` is activated via:
+
+```groovy
+// ReactContainerPlugin.groovy (excerpt)
+project.plugins.apply('com.github.node-gradle.node')
+
+project.node {
+    version     = project.findProperty('node.version') ?: '22.4.1'
+    pnpmVersion = project.findProperty('pnpm.version') ?: '9.5.0'
+    download    = true
+}
+```
+
+Node and pnpm versions are overridable per-project via `gradle.properties`, but default to the values pinned in the plugin, keeping the fleet consistent.
+
+### Per-Island Task Pattern
+
+Each island subproject should declare its OpenAPI client generation as a dependency of its pnpm build task, wiring the BFF's Gradle output directly into the frontend build chain:
+
+```kotlin
+tasks.register<PnpmTask>("generateApiClient") {
+    args = listOf("run", "generate:api")
+    inputs.file("${project(':bff').buildDir}/openapi.yaml")  // BFF Gradle output
+    outputs.dir("src/api/generated")
+}
+
+tasks.register<PnpmTask>("buildIsland") {
+    dependsOn("generateApiClient")
+    args = listOf("run", "build")
+    inputs.dir("src")
+    inputs.file("package.json")
+    outputs.dir("dist")
+}
+
+tasks.named("assemble") {
+    dependsOn("buildIsland")
+}
+```
+
+This pattern enforces the OpenAPI-first workflow described in the [OpenAPI and TypeScript Client Generation](#openapi-and-typescript-client-generation) section: the BFF emits its spec as a Gradle build artifact, and the island's `generateApiClient` task declares it as an `input`, so Gradle's dependency engine guarantees the spec is current before any TypeScript client code is generated.
+
+### Nx and Gradle Coexistence
+
+Nx manages the JavaScript monorepo build graph (libraries, islands, affected-only rebuilds). Gradle is the outer orchestrator that sequences backend compilation, OpenAPI generation, and the Nx/pnpm frontend build. The recommended call pattern is:
+
+```kotlin
+tasks.register<PnpmTask>("nxBuildAffected") {
+    dependsOn("generateApiClient")
+    args = listOf("exec", "nx", "affected", "--target=build")
+    inputs.dir("apps")
+    inputs.dir("libs")
+    outputs.dir("dist")
+}
+```
+
+---
+
 ## Technology Stack Summary
 
 | Layer | Technology | Role |
@@ -206,4 +306,5 @@ Islands must not share a Redux store, Zustand store, or React context across the
 | API client layer | Generated TypeScript stubs (`openapi-typescript` / `@hey-api/openapi-ts`) | Type-safe, contract-bound service communication |
 | Monorepo tooling | Nx workspace | Unified build graph, library management, Storybook presets[cite:98][cite:100] |
 | Shared dependency control | Module Federation `shared` singleton config | Prevents duplicate React/Radix instances[cite:93][cite:96] |
+| Gradle–frontend bridge | `com.github.node-gradle.node` (v7.1.0+) | Orchestrates pnpm builds from Gradle, wires OpenAPI generation as task dependencies |
 
