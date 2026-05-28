@@ -294,6 +294,112 @@ tasks.register<PnpmTask>("nxBuildAffected") {
 
 ---
 
+## Dependency Management Strategy: The `webpack-shared-config` Pattern
+
+### Mental Model: Maven BOM Applied to Module Federation
+
+Java engineers familiar with Spring's approach to transitive dependency management will recognize the pattern here. In Maven, a BOM (Bill of Materials) — such as `spring-boot-starter-web` — centralises version declarations so that consuming modules never individually pin dependency versions. Module Federation requires an analogous discipline, but it operates across two distinct layers that must both be understood and respected.
+
+**The two layers of dependency management in this architecture:**
+
+| Layer | Tool | When it runs | Maven analog |
+|---|---|---|---|
+| **Install-time resolution** | pnpm workspace | `pnpm install` | `dependencyManagement` / BOM |
+| **Runtime deduplication** | Module Federation `shared` config | Browser load time | Single JVM classpath |
+
+These layers are complementary. pnpm workspace guarantees that only one physical version of `react` is installed in `node_modules` across all islands. Module Federation `shared` then guarantees that only one *runtime instance* of React is served to the browser regardless of which island loaded first. Both layers are required — neither alone is sufficient.
+
+### The Version Mismatch Risk (No Maven Equivalent)
+
+Maven resolves dependency conflicts at build time and produces a single classpath. A version conflict surfaces as a build error before any code runs.
+
+Module Federation resolves shared dependencies at **browser load time**. If `island-A`'s `remoteEntry.js` advertises `react@18.2.0` and `island-B` advertises `react@18.3.0`, the runtime must pick one winner. The island that "lost" may throw cryptic errors at runtime — hooks violations, context mismatches, or silent rendering failures — that are far harder to diagnose than a Maven build failure.
+
+Mitigation is a two-part convention enforced by this architecture:
+
+1. **pnpm workspace root pins the version** — `react`, `react-dom`, and all `@radix-ui/*` packages are declared in the workspace root `package.json`. No island `package.json` overrides these versions. pnpm's workspace protocol ensures all islands resolve to the same installed copy.
+2. **`singleton: true, requiredVersion`** in the `shared` config makes any mismatch throw loudly at load time rather than silently producing duplicate React instances.
+
+### The `libs/webpack-shared-config` Library
+
+The architectural convention for Archipelago is to centralise the Module Federation `shared` object in a dedicated library — analogous to how `core/spring-lib` acts as the single dependency authority in a Java multi-module project.
+
+This library is added to the monorepo structure:
+
+```
+libs/
+├── ui-primitives/            # Radix wrapper components, design tokens
+├── ui-tokens/                # CSS variables, spacing, color
+└── webpack-shared-config/    # NEW: authoritative Module Federation shared config
+    └── src/
+        └── federation-shared.ts
+```
+
+The library exports a single object derived from the workspace root `package.json`, ensuring version references are never duplicated or hand-maintained:
+
+```typescript
+// libs/webpack-shared-config/src/federation-shared.ts
+import { dependencies } from '../../../package.json'; // workspace root
+
+export const federationShared = {
+  react: {
+    singleton: true,
+    requiredVersion: dependencies['react'],
+  },
+  'react-dom': {
+    singleton: true,
+    requiredVersion: dependencies['react-dom'],
+  },
+  '@radix-ui/react-dialog': { singleton: true },
+  '@radix-ui/react-dropdown-menu': { singleton: true },
+  '@radix-ui/react-tabs': { singleton: true },
+  '@radix-ui/react-tooltip': { singleton: true },
+  // Add each @radix-ui/* primitive used across islands
+};
+```
+
+Every island and the shell spread this object into their Module Federation `shared` config — never declaring shared dependencies inline:
+
+```typescript
+// apps/island-name/webpack.config.ts
+import { ModuleFederationPlugin } from '@module-federation/enhanced';
+import { federationShared } from '../../libs/webpack-shared-config/src/federation-shared';
+
+export default {
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'islandName',
+      filename: 'remoteEntry.js',
+      exposes: { './Widget': './src/components/Widget' },
+      shared: federationShared,  // ← single source of truth
+    }),
+  ],
+};
+```
+
+### Conventions Agents and Island Authors Must Follow
+
+The following rules are non-negotiable for any agent or developer adding a new island or shared library to this monorepo:
+
+1. **Never pin a shared dependency version in an island's own `package.json`.** Use `"*"` or the workspace protocol (`"workspace:*"`) for any package that is declared in `federationShared`. The workspace root is the version authority.
+2. **Never add an entry to `shared` in an island's `webpack.config.ts` directly.** All additions to the shared singleton list must be made in `libs/webpack-shared-config/src/federation-shared.ts` and take effect for all islands simultaneously.
+3. **When adding a new `@radix-ui/*` primitive**, add it to both `libs/ui-primitives` (wrapper component) and `federationShared` (singleton declaration). A primitive in `ui-primitives` that is absent from `federationShared` will be bundled independently by each island that imports it, defeating deduplication.
+4. **`react`, `react-dom`, and all `@radix-ui/*` packages must always be `singleton: true`.** This is not optional. A single duplicate React instance will cause the entire application to throw hooks violations.
+5. **The workspace root `package.json` is the BOM.** Treat version bumps there with the same discipline as bumping a Spring BOM version: test all islands, validate `federationShared` entries still resolve correctly, and release as a coordinated change.
+
+### Analogy Map for Java Engineers
+
+| Maven / Spring concept | Frontend equivalent |
+|---|---|
+| `spring-boot-starter-web` BOM | `libs/webpack-shared-config` exporting `federationShared` |
+| `dependencyManagement` block | Workspace root `package.json` `dependencies` |
+| Transitive dependency resolution | pnpm workspace hoisting at install time |
+| Single JVM classpath | `singleton: true` runtime deduplication in Module Federation |
+| Build-time version conflict error | Runtime mismatch → load-time exception (stricter to debug) |
+| Multi-module `pom.xml` inheritance | Nx `libs/` imported by all `apps/` |
+
+---
+
 ## Technology Stack Summary
 
 | Layer | Technology | Role |
