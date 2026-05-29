@@ -68,6 +68,10 @@ gradlePlugin {
             id = "archipelago.spring-lib"
             implementationClass = "com.archipelago.plugins.spring.SpringLibPlugin"
         }
+        springServicePlugin {
+            id = "archipelago.spring-service"
+            implementationClass = "com.archipelago.plugins.spring.SpringServicePlugin"
+        }
         pulumiPlugin {
             id = "archipelago.pulumi"
             implementationClass = "com.archipelago.plugins.pulumi.PulumiPlugin"
@@ -75,6 +79,10 @@ gradlePlugin {
         islandPlugin {
             id = "archipelago.island"
             implementationClass = "com.archipelago.plugins.island.IslandPlugin"
+        }
+        scaffoldIslandPlugin {
+            id = "archipelago.scaffold-island"
+            implementationClass = "com.archipelago.plugins.island.ScaffoldIslandPlugin"
         }
     }
 }
