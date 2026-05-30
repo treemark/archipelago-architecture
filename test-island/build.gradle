@@ -1,0 +1,5 @@
+plugins {
+    id 'archipelago.island'
+}
+
+description = 'test-island — Archipelago island aggregator'

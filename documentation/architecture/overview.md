@@ -11,7 +11,7 @@ The Archipelago Architecture project is designed as a modular, extensible system
 │                    Application Layer                      │
 │  ┌─────────────────┐         ┌────────────────────────┐ │
 │  │  Core Module    │         │   Build Plugin Module   │ │
-│  │  (Kotlin)       │         │   (Groovy)              │ │
+│  │  (Java)         │         │   (Groovy)              │ │
 │  └────────┬────────┘         └────────────┬───────────┘ │
 │           │                                │              │
 │  ┌────────▼────────────────────────────────▼───────────┐ │
@@ -29,7 +29,7 @@ The core module contains fundamental libraries and infrastructure needed by othe
 
 **Technology Stack:**
 - Spring Framework
-- Java as primary language
+- Java as primary language; Kotlin and Scala are supported JVM languages within Spring modules
 - React for UI
 - Pulumi (Java API) for IaC
 - JUnit for testing
@@ -72,6 +72,6 @@ Configuration is managed through:
 
 ## Testing Strategy
 
-- Unit tests in both Kotlin (`test/kotlin/`) and Java (`test/java/`)
+- Unit tests written in Java (primary); Kotlin and Scala tests are also supported in the same `test/` source set
 - Test classes colocated with source code within each module
 - Spring Boot test support for integration testing

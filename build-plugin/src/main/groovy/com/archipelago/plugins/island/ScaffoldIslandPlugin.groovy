@@ -33,7 +33,7 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
     static final String TASK_NAME = 'scaffoldIsland'
     static final String GROUP     = 'archipelago'
 
-    static final String DEFAULT_NODE_VERSION = '22.4.1'
+    static final String DEFAULT_NODE_VERSION = '22.13.0'
     static final String DEFAULT_PNPM_VERSION = '9.5.0'
 
     static final List<String> KNOWN_MODULE_TYPES = [
@@ -107,6 +107,12 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
                 execFile = new File(pnpmBinDir, pnpmExec)
             }
             
+            // FIX: Ensure we're using the bin directory explicitly (workaround for VariantComputer bug)
+            // The bug resolved pnpm-latest/pnpm instead of pnpm-latest/bin/pnpm
+            if (!execFile.absolutePath.contains('/bin/') && !execFile.absolutePath.endsWith('/bin')) {
+                execFile = new File(pnpmBinDir, pnpmExec)
+            }
+            
             project.logger.debug("scaffoldIsland: resolved pnpm at ${execFile.absolutePath} (exists: ${execFile.exists()})")
             return execFile.absolutePath
         } catch (Throwable t) {
@@ -116,6 +122,13 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
             )
             return 'pnpm'
         }
+    }
+    
+    /**
+     * Resolves whether to overwrite an existing island directory.
+     */
+    private boolean resolveOverwrite(Project project) {
+        return project.findProperty('overwrite')?.toString()?.trim()?.toLowerCase() == 'true'
     }
 
     // -------------------------------------------------------------------------
@@ -161,6 +174,18 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
     private void scaffold(Project project, String islandName, List<String> subModTypes) {
         def rootDir   = project.rootDir
         def islandDir = new File(rootDir, islandName)
+        def overwrite = resolveOverwrite(project)
+
+        // Check if island already exists
+        if (islandDir.exists()) {
+            if (!overwrite) {
+                throw new IllegalArgumentException(
+                    "Island '${islandName}' already exists. Use -Poverwrite=true to replace it."
+                )
+            }
+            project.logger.lifecycle("  ⚠  Overwriting existing island: ${islandName}")
+            islandDir.deleteDir()
+        }
 
         // Resolve once; reused by any submodule that needs pnpm.
         def pnpmExec = resolvePnpmExec(project)
@@ -377,6 +402,27 @@ plugins {
 
 description = '${islandName} — Archipelago island aggregator'
 """.stripIndent()
+
+        // Also create .gitignore for the island root
+        new File(islandDir, '.gitignore').text = """\
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/*.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+
+# Test output (per submodule)
+test-island-*/*/build/
+test-island-*/*/target/
+"""
     }
 
     private void writePackageJson(File modDir, String modName, String moduleType) {
@@ -448,6 +494,20 @@ export default {
 
     private void appendToSettings(File rootDir, String islandName, List<String> subModTypes) {
         def settingsFile = new File(rootDir, 'settings.gradle')
+        
+        // Check if island is already registered in settings.gradle
+        if (settingsFile.exists()) {
+            def content = settingsFile.text
+            // Check if island name appears in an include statement
+            def islandIncludeRegex = /\binclude\s*\(\s*['"][^'"]*${islandName}[^'"]*['"]\s*\)/
+            if (content ==~ islandIncludeRegex) {
+                throw new IllegalArgumentException(
+                    "Island '${islandName}' is already registered in settings.gradle. " +
+                    "Use -Poverwrite=true to replace the entire island."
+                )
+            }
+        }
+        
         def addition = new StringBuilder("\n// Island: ${islandName}\ninclude('${islandName}')\n")
         subModTypes.each { type ->
             addition.append("include('${islandName}:${islandName}-${type}')\n")

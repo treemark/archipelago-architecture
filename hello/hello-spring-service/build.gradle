@@ -1,0 +1,5 @@
+plugins {
+    id 'archipelago.spring-service'
+}
+
+description = 'hello-spring-service — Spring service/BFF for the hello island'

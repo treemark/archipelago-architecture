@@ -1,0 +1,5 @@
+plugins {
+    id 'archipelago.spring-lib'
+}
+
+description = 'hello-spring-lib — shared Java library for the hello island'

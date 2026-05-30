@@ -2,22 +2,41 @@
 
 ## Plugin Architecture Pattern
 
-The project implements a plugin-based architecture that allows for dynamic extension of functionality.
+Archipelago uses **Gradle build plugins** (defined in `build-plugin/`) to enforce conventions across all island modules. These are build-time plugins — they are not a runtime plugin system and do not involve file-based discovery or application startup.
 
 ### Plugin Characteristics
 
 | Aspect | Implementation |
 |--------|---------------|
 | **Language** | Groovy |
-| **Discovery** | File-based in `plugins/` directory |
-| **Lifecycle** | Initialized on application startup |
-| **Communication** | Through shared interfaces/contracts |
+| **Discovery** | Gradle plugin ID resolution via composite build (local dev) or GitHub Packages (external consumers) |
+| **Lifecycle** | Applied at Gradle configuration time via `plugins { id 'archipelago.*' }` in module `build.gradle` files |
+| **Communication** | Gradle project model — plugins configure tasks, dependencies, and conventions |
+
+### Composite Build (Local Development)
+
+Within this repository, `build-plugin` is resolved from source via a Gradle composite build declared in `settings.gradle`:
+
+```groovy
+pluginManagement {
+    includeBuild 'build-plugin'
+}
+```
+
+This means plugin changes are picked up automatically on the next build — no `publishToMavenLocal` or `--refresh-dependencies` required. External consumer repositories reference a published release via GitHub Packages instead.
 
 ### Plugin Categories
 
-1. **Core Plugins** - Essential functionality bundled with the application
-2. **Extension Plugins** - Optional modules that extend capabilities
-3. **Integration Plugins** - Connect to external systems (Git, Shell, etc.)
+| Plugin ID | Purpose |
+|-----------|--------|
+| `archipelago.island` | Island aggregator — coordinates builds across all submodules |
+| `archipelago.react-lib` | Shared React component library conventions |
+| `archipelago.react-container` | React Docker container build and packaging |
+| `archipelago.spring-lib` | Shared Spring library conventions |
+| `archipelago.spring-container` | Spring Docker container build and packaging |
+| `archipelago.pulumi-lib` | Shared Pulumi library conventions |
+| `archipelago.pulumi` | Pulumi IaC stack lifecycle (deploy, destroy, update) |
+| `archipelago.scaffold` | Root-level scaffolding tasks for generating new islands |
 
 
 ### Layer Responsibilities
@@ -25,7 +44,7 @@ The project implements a plugin-based architecture that allows for dynamic exten
 | Layer | Responsibility | Location |
 |-------|----------------|----------|
 | **Controller** | HTTP request handling, input validation | `*.java` |
-| **Service** | Business logic | Kotlin services |
+| **Service** | Business logic | Java (primary); Kotlin and Scala also supported |
 | **Repository** | Data access | Spring Data repositories |
 
 ## Multi-Module Project Pattern
@@ -63,12 +82,21 @@ PublishUtils provides utilities:
 
 ### Module Dependencies
 
+`core` and `build-plugin` are independent modules — `core` does not depend on `build-plugin` at runtime or compile time.
+
+`build-plugin` provides Gradle plugins that are applied to `core` submodules (and all other island modules) **at build time** via the Gradle plugin system. This is a build-tool relationship, not a code dependency:
+
 ```
-core ──────────────┐
-     depends on    │
-                   ▼
               build-plugin
+                   │
+          applied at build time
+                   │
+         ┌─────────┼──────────┐
+         ▼         ▼          ▼
+      core/*   island-a/*  island-b/*
 ```
+
+No island module — including `core` — has a compile or runtime dependency on `build-plugin`.
 
 ## Convention Over Configuration
 
@@ -86,10 +114,12 @@ Tests are colocated with source code:
 ```
 src/
 ├── main/
-│   ├── kotlin/        # Production Kotlin
-│   ├── java/          # Production Java
+│   ├── java/          # Production Java (primary)
+│   ├── kotlin/        # Production Kotlin (supported)
+│   ├── scala/         # Production Scala (supported)
 │   └── resources/     # Resources
 └── test/
-    ├── kotlin/        # Kotlin tests
-    └── java/          # Java tests
+    ├── java/          # Java tests (primary)
+    ├── kotlin/        # Kotlin tests (supported)
+    └── scala/         # Scala tests (supported)
 ```

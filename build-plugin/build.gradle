@@ -19,7 +19,8 @@ repositories {
     gradlePluginPortal()
 }
 
-def lombokVersion = project.findProperty("lombok.version")
+// Direct version to avoid property resolution issues in composite builds
+def lombokVersion = "1.18.34"
 
 dependencies {
     implementation(platform("org.apache.groovy:groovy-bom:4.0.23"))

@@ -32,7 +32,7 @@ class ReactLibPlugin implements Plugin<Project> {
         def artifactName = PublishUtils.determineArtifactName(project)
         
         // Node configuration - versions from gradle.properties with sensible defaults
-        def nodeVersion = project.findProperty('node.version') ?: '22.4.1'
+        def nodeVersion = project.findProperty('node.version') ?: '22.13.0'
         def pnpmVersion = project.findProperty('pnpm.version') ?: '9.5.0'
         
         project.node {

@@ -1,0 +1,6 @@
+rootProject.name = "build-plugin"
+
+// Load properties from parent
+def props = new Properties()
+file("../gradle.properties").withInputStream { props.load(it) }
+props.each { k, v -> ext[k] = v }

@@ -1,8 +1,11 @@
 // Top-level build file for archipelago-architecture multi-module project
 
 buildscript {
+    // Note: build-plugin is resolved via the composite build declared in settings.gradle
+    // (pluginManagement { includeBuild 'build-plugin' }) during local development.
+    // The mavenLocal() and GitHub Packages entries below are used when consuming
+    // published releases of build-plugin from external consumer repositories.
     repositories {
-        mavenLocal()
         maven {
             url = uri("https://maven.pkg.github.com/treemark/archipelago-architecture")
             credentials {
@@ -18,8 +21,6 @@ buildscript {
     }
     dependencies {
         classpath 'javax.servlet:javax.servlet-api:3.1.0'
-        classpath 'com.archipelago.gradle:build-plugin:current-SNAPSHOT'
-//        classpath project(':build-plugin')
 //        classpath "org.ajoberstar.grgit:grgit-core:5.3.3"
 //        classpath 'org.curioswitch.gradle-pulumi-plugin:org.curioswitch.gradle-pulumi-plugin.gradle.plugin:0.9.1'
     }
@@ -28,7 +29,7 @@ buildscript {
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0" apply false
-
+    id 'archipelago.scaffold'
 }
 
 def springBootVersion = project.findProperty("spring-boot.version")
@@ -39,6 +40,3 @@ subprojects {
         mavenCentral()
     }
 }
-
-// Apply the ScaffoldIslandPlugin to the root project
-apply plugin: 'archipelago.scaffold'

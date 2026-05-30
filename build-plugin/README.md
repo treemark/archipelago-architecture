@@ -72,23 +72,37 @@ plugins {
 ```bash
 ./gradlew :build-plugin:build
 ./gradlew :build-plugin:jar
-./gradlew :build-plugin:publish
 ```
 
 ## Developing Plugin Changes
 
-When making changes to plugins in the build-plugin module, those changes must be compiled and published locally before they can be used by other modules in the project. This is because the core modules depend on the build-plugin via a `classpath` in the root `build.gradle`.
+This repository uses a **Gradle composite build** to resolve `build-plugin` from source during local development. This means plugin changes are picked up automatically on the next build — no publish step and no `--refresh-dependencies` required.
 
-**Important:** After modifying any plugin code, run:
+This is configured in `settings.gradle`:
+
+```groovy
+pluginManagement {
+    includeBuild 'build-plugin'
+}
+```
+
+Gradle substitutes the published `build-plugin` artifact with the local source build transparently. After modifying plugin code, simply run your normal build:
 
 ```bash
-./gradlew :build-plugin:publishToMavenLocal -PbuildPluginOnly=true
+./gradlew assemble
 ```
-This publishes the plugin artifacts to your local Maven repository (`~/.m2/repository`), making them available for the archipelago module plugins to use.
- 
-Then rebuild the dependent modules, --refresh-dependencies is required to pick up changes to libraries who's versions haven't changed.
+
+Plugin changes are compiled and applied automatically.
+
+> **Tip**: With the composite build in place, you can set breakpoints inside plugin source files and step through them during a consumer module build using IntelliJ's Gradle debugger.
+
+## Publishing Releases
+
+For publishing a release of `build-plugin` to GitHub Packages (for consumption by external implementation repositories):
 
 ```bash
-./gradlew --refresh-dependencies assemble
+./gradlew :build-plugin:publish
 ```
+
+External consumer repositories reference the published artifact via their own `pluginManagement` block pointing to GitHub Packages — they do not need the source of this repository.
 
