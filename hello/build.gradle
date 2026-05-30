@@ -1,5 +1,0 @@
-plugins {
-    id 'archipelago.island'
-}
-
-description = 'hello — Archipelago island aggregator'
