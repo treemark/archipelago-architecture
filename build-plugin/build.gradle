@@ -81,7 +81,7 @@ gradlePlugin {
             implementationClass = "com.archipelago.plugins.island.IslandPlugin"
         }
         scaffoldIslandPlugin {
-            id = "archipelago.scaffold-island"
+            id = "archipelago.scaffold"
             implementationClass = "com.archipelago.plugins.island.ScaffoldIslandPlugin"
         }
     }

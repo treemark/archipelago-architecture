@@ -213,7 +213,12 @@ The frontend build is orchestrated by Gradle using the **`com.github.node-gradle
 build-plugin/src/main/groovy/com/archipelago/plugins/react/
 ├── ReactContainerPlugin.groovy   # For deployable React apps (Module Federation remotes/shell)
 └── ReactLibPlugin.groovy         # For shared React libraries (ui-primitives, ui-tokens, etc.)
+
+build-plugin/src/main/groovy/com/archipelago/plugins/island/
+└── ScaffoldIslandPlugin.groovy   # Bootstraps a new island; auto-provisions Node/pnpm
 ```
+
+The `ScaffoldIslandPlugin` (which registers the `scaffoldIsland` task) also applies and configures `com.github.node-gradle.node` at the root project. This means contributors do **not** need a globally-installed `pnpm` to run `./gradlew scaffoldIsland`: the task depends on `pnpmSetup`, which downloads the pinned Node and pnpm versions on first invocation, and the scaffold logic then shells out to the absolute path of the provisioned pnpm executable. The same `node.version` / `pnpm.version` Gradle properties that govern `ReactLibPlugin` and `ReactContainerPlugin` are honoured here, so the entire fleet — including bootstrap — stays on a single Node/pnpm pair.
 
 These convention plugins are the **single point of control** for the `com.github.node-gradle.node` dependency. Centralising the integration here provides three key benefits:
 

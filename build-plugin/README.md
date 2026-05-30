@@ -36,6 +36,7 @@ The build-plugin defines Gradle plugins for each module type:
 | `archipelago.react-lib` | Shared React components |
 | `archipelago.spring-lib` | Shared Spring logic |
 | `archipelago.pulumi` | Shared Pulumi patterns, VPC, messaging |
+| `archipelago.scaffold-island` | Registers the `scaffoldIsland` root task; auto-provisions Node/pnpm via `com.github.node-gradle.node` (no global `pnpm` install required) |
 
 ### What These Plugins Standardize
 

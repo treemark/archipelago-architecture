@@ -28,6 +28,7 @@ buildscript {
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0" apply false
+
 }
 
 def springBootVersion = project.findProperty("spring-boot.version")
@@ -38,3 +39,6 @@ subprojects {
         mavenCentral()
     }
 }
+
+// Apply the ScaffoldIslandPlugin to the root project
+apply plugin: 'archipelago.scaffold'

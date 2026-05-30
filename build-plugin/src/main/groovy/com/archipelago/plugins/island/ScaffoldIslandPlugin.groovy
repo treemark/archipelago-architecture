@@ -1,5 +1,7 @@
 package com.archipelago.plugins.island
 
+import com.github.gradle.node.NodeExtension
+import com.github.gradle.node.variant.VariantComputer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -31,6 +33,9 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
     static final String TASK_NAME = 'scaffoldIsland'
     static final String GROUP     = 'archipelago'
 
+    static final String DEFAULT_NODE_VERSION = '22.4.1'
+    static final String DEFAULT_PNPM_VERSION = '9.5.0'
+
     static final List<String> KNOWN_MODULE_TYPES = [
         'spring-service', 'spring-lib', 'react-lib', 'react-ui', 'pulumi'
     ]
@@ -39,15 +44,77 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
         // Only register on the root project
         if (project != project.rootProject) return
 
-        project.tasks.register(TASK_NAME) {
-            group       = GROUP
-            description = 'Scaffold a new Archipelago island with selected submodules.'
+        // Apply and configure com.github.node-gradle.node at the root so the
+        // scaffold task can reuse the plugin's Node/pnpm provisioning rather
+        // than relying on a globally-installed pnpm. This mirrors the
+        // configuration used by ReactLibPlugin / ReactContainerPlugin so all
+        // archipelago modules share the same Node/pnpm versions.
+        project.plugins.apply('com.github.node-gradle.node')
 
-            doLast {
+        def nodeVersion = project.findProperty('node.version') ?: DEFAULT_NODE_VERSION
+        def pnpmVersion = project.findProperty('pnpm.version') ?: DEFAULT_PNPM_VERSION
+
+        project.node {
+            version       = nodeVersion
+            pnpmVersion   = pnpmVersion
+            download      = true
+            distBaseUrl   = 'https://nodejs.org/dist'
+        }
+
+        project.tasks.register(TASK_NAME) { t ->
+            t.group       = GROUP
+            t.description = 'Scaffold a new Archipelago island with selected submodules.'
+
+            // Ensure pnpm (and the Node distribution it sits on) is provisioned
+            // before scaffold runs anything that shells out to pnpm.
+            t.dependsOn 'pnpmSetup'
+
+            t.doLast {
                 def islandName  = resolveIslandName(project)
                 def subModTypes = resolveSubModules(project)
                 scaffold(project, islandName, subModTypes)
             }
+        }
+    }
+
+    /**
+     * Resolves the absolute path to the pnpm executable provisioned by
+     * com.github.node-gradle.node. Returns null if the path cannot be computed
+     * (caller should fall back to PATH lookup).
+     */
+    private String resolvePnpmExec(Project project) {
+        try {
+            def nodeExt = NodeExtension.get(project)
+            def vc = new VariantComputer()
+            
+            // Step 1: Get Node directory (Provider<File>)
+            def nodeDirProvider = vc.computeNodeDir(nodeExt)
+            def nodeDir = nodeDirProvider.get().asFile
+            
+            // Step 2: Get pnpm directory from NodeExtension (Provider<File>) - then use IT
+            // Note: computePnpmBinDir takes a Provider, not a resolved File
+            def pnpmDirProvider = vc.computePnpmDir(nodeExt)
+            def pnpmBinDirProvider = vc.computePnpmBinDir(pnpmDirProvider)
+            def pnpmBinDir = pnpmBinDirProvider.get().asFile
+            
+            // Step 3: Get the pnpm executable name (Provider<String>), passing pnpmDirProvider
+            def pnpmExecProvider = vc.computePnpmExec(nodeExt, pnpmDirProvider)
+            def pnpmExec = pnpmExecProvider.get()
+            
+            // If the exec is not already absolute, combine with bin directory
+            def execFile = new File(pnpmExec)
+            if (!execFile.isAbsolute()) {
+                execFile = new File(pnpmBinDir, pnpmExec)
+            }
+            
+            project.logger.debug("scaffoldIsland: resolved pnpm at ${execFile.absolutePath} (exists: ${execFile.exists()})")
+            return execFile.absolutePath
+        } catch (Throwable t) {
+            project.logger.warn(
+                "scaffoldIsland: could not resolve provisioned pnpm path (${t.class.simpleName}: ${t.message}); " +
+                "falling back to 'pnpm' on PATH."
+            )
+            return 'pnpm'
         }
     }
 
@@ -95,9 +162,13 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
         def rootDir   = project.rootDir
         def islandDir = new File(rootDir, islandName)
 
+        // Resolve once; reused by any submodule that needs pnpm.
+        def pnpmExec = resolvePnpmExec(project)
+
         project.logger.lifecycle("╔══════════════════════════════════════════════════════")
         project.logger.lifecycle("║  Scaffolding island: ${islandName}")
         project.logger.lifecycle("║  SubModules: ${subModTypes.join(', ')}")
+        project.logger.lifecycle("║  pnpm: ${pnpmExec}")
         project.logger.lifecycle("╚══════════════════════════════════════════════════════")
 
         // 1. Island root directory + build.gradle
@@ -121,7 +192,7 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
                     scaffoldReactLib(project, modDir, islandName, modName)
                     break
                 case 'react-ui':
-                    scaffoldReactUi(project, modDir, islandName, modName)
+                    scaffoldReactUi(project, modDir, islandName, modName, pnpmExec)
                     break
                 case 'pulumi':
                     scaffoldPulumi(modDir, islandName, modName)
@@ -158,7 +229,7 @@ class ScaffoldIslandPlugin implements Plugin<Project> {
 
         new File(modDir, 'build.gradle').text = """\
 plugins {
-    id 'archipelago.spring-lib'
+    id 'archipelago.spring-service'
 }
 
 description = '${modName} — Spring service/BFF for the ${islandName} island'
@@ -183,10 +254,8 @@ description = '${modName} — shared React library for the ${islandName} island'
         new File(modDir, 'src/index.ts').text = "// ${modName} entry point\nexport {};\n"
     }
 
-    private void scaffoldReactUi(Project project, File modDir, String islandName, String modName) {
+    private void scaffoldReactUi(Project project, File modDir, String islandName, String modName, String pnpmExec) {
         def parentDir = modDir.parentFile  // the island directory
-        def nodeVersion  = project.findProperty('node.version')  ?: '22.4.1'
-        def pnpmVersion  = project.findProperty('pnpm.version')  ?: '9.5.0'
 
         project.logger.lifecycle("  → Running pnpm create vite for ${modName}...")
 
@@ -194,16 +263,16 @@ description = '${modName} — shared React library for the ${islandName} island'
         // pnpm create vite <projectName> --template react-ts
         // Must run from the island parent dir so the project lands at
         // <island>/<island>-react-ui/
-        exec(project, parentDir, 'pnpm', 'create', 'vite', modName, '--template', 'react-ts')
+        exec(project, parentDir, pnpmExec, 'create', 'vite', modName, '--template', 'react-ts')
 
         // ── 2. Add Module Federation and Archipelago dependencies ────────────
         // @module-federation/vite  — official MF plugin for Vite
         // @archipelago/core-react-lib — the shared Radix/token library from core
-        exec(project, modDir, 'pnpm', 'add', '-D',
+        exec(project, modDir, pnpmExec, 'add', '-D',
             '@module-federation/vite',
             '@module-federation/enhanced'
         )
-        exec(project, modDir, 'pnpm', 'add',
+        exec(project, modDir, pnpmExec, 'add',
             '@archipelago/core-react-lib'
         )
 
@@ -392,20 +461,75 @@ export default {
 
     /**
      * Executes a command in the given working directory, streaming output to
-     * Gradle's lifecycle log. Throws if the process exits non-zero.
+     * Gradle's lifecycle log and capturing a tail of each stream for inclusion
+     * in error messages. Inherits the parent PATH (and full environment) so
+     * that git and other system tools remain discoverable even though the
+     * pnpm executable is now passed as an absolute path.
+     *
+     * Throws a RuntimeException with the working dir, exit code, and the
+     * last few lines of stdout/stderr on non-zero exit.
      */
     private void exec(Project project, File workDir, String... cmd) {
-        project.logger.lifecycle("     ${cmd.join(' ')}")
-        def proc = cmd.toList().execute(null, workDir)
-        proc.consumeProcessOutput(
-            new PrintStream(System.out),
-            new PrintStream(System.err)
-        )
-        proc.waitFor()
-        if (proc.exitValue() != 0) {
+        project.logger.lifecycle("     (cwd: ${workDir}) ${cmd.join(' ')}")
+
+        def pb = new ProcessBuilder(cmd.toList())
+                .directory(workDir)
+        // ProcessBuilder.environment() is pre-populated with the current
+        // process environment (including PATH), so git and other system
+        // tools remain findable. We intentionally do not clear it.
+
+        Process proc
+        try {
+            proc = pb.start()
+        } catch (IOException ioe) {
             throw new RuntimeException(
-                "Command failed (exit ${proc.exitValue()}): ${cmd.join(' ')}"
+                "scaffoldIsland: failed to start command '${cmd[0]}' in ${workDir}: ${ioe.message}. " +
+                "Verify Node/pnpm provisioning (./gradlew pnpmSetup) and that '${cmd[0]}' is an absolute path or on PATH.",
+                ioe
             )
+        }
+
+        def stdoutTail = new LinkedList<String>()
+        def stderrTail = new LinkedList<String>()
+        final int TAIL_LINES = 40
+
+        def stdoutThread = Thread.start {
+            proc.inputStream.eachLine { line ->
+                System.out.println(line)
+                synchronized (stdoutTail) {
+                    stdoutTail.add(line)
+                    if (stdoutTail.size() > TAIL_LINES) stdoutTail.removeFirst()
+                }
+            }
+        }
+        def stderrThread = Thread.start {
+            proc.errorStream.eachLine { line ->
+                System.err.println(line)
+                synchronized (stderrTail) {
+                    stderrTail.add(line)
+                    if (stderrTail.size() > TAIL_LINES) stderrTail.removeFirst()
+                }
+            }
+        }
+
+        int exit = proc.waitFor()
+        stdoutThread.join()
+        stderrThread.join()
+
+        if (exit != 0) {
+            def msg = new StringBuilder()
+            msg << "scaffoldIsland: command failed (exit ${exit})\n"
+            msg << "  command : ${cmd.join(' ')}\n"
+            msg << "  cwd     : ${workDir.absolutePath}\n"
+            if (!stderrTail.isEmpty()) {
+                msg << "  stderr  (last ${stderrTail.size()} lines):\n"
+                stderrTail.each { msg << "    ${it}\n" }
+            }
+            if (stderrTail.isEmpty() && !stdoutTail.isEmpty()) {
+                msg << "  stdout  (last ${stdoutTail.size()} lines):\n"
+                stdoutTail.each { msg << "    ${it}\n" }
+            }
+            throw new RuntimeException(msg.toString())
         }
     }
 

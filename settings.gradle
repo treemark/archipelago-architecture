@@ -6,3 +6,4 @@ if (!settings.hasProperty('buildPluginOnly') || settings.getProperty('buildPlugi
     include("core:pulumi")
 }
 include("build-plugin")
+
